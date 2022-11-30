@@ -7,11 +7,11 @@ import math
 
 
 #-----------------------------------------------------------------------
-# USE THIS FUNCTION TO WRITE THE MAIN PROGRAM
+# MAIN PROGRAM
 def main():
     #-----------------------------------------------------------------------
     # VISUAL SETUP
-    # Declare the variables
+    # Declare the global variables
     global renderer, scene, camera, controls,composer
     
     #Set up the renderer
@@ -40,14 +40,15 @@ def main():
     # DESIGN / GEOMETRY GENERATION
     # Geometry Creation
     global geom_params, capsules_x, capsules_y, capsule_lines, cylinders_x, cylinders_y, cylinder_lines
+    # lists for both dimensions and lines
     capsules_x = []
     capsules_y = []
     capsule_lines = []
-    # zwei weitere leere Listen anlegen
+    # second geometry: lists for both dimensions and lines
     cylinders_x = []
     cylinders_y = []
     cylinder_lines = []
-
+    # set parameters for both geometries as dictionary
     geom_params_cylinder = {
         "radius": 5,
         "height": 20,
@@ -70,13 +71,13 @@ def main():
         "type": "capsule"
     }
     #-----------------------------------------------------------------------
-    # change the geometry here from capsules to cylinders 
+    # USER INTERACTION POSSIBLE
+    # change the geometry here from capsules to cylinders as wanted
     geom_params = geom_params_cylinder
     #geom_params = geom_params_capsule
     #-----------------------------------------------------------------------
     
     geom_params = Object.fromEntries(to_js(geom_params))
-
 
     # create Materials
     global material, line_material, color, color_lines, geometry, plane, light, loader
@@ -90,21 +91,12 @@ def main():
     geometry = THREE.PlaneGeometry.new(2000, 2000)
     geometry.rotateX(- math.pi / 2)
 
-    #loader = THREE.TextureLoader.new() 
-    #material = THREE.MeshBasicMaterial.new({
-   # map: loader.load(''),})
-   # geometry = THREE.Mesh.new(geometry, material)
-
-
-    
-
-    #create a plane
-
+    # create a plane to make the simulation more grounded
     plane = THREE.Mesh.new(geometry, material)
     plane.position.y = -200
     plane.receiveShadow = True
     scene.add(plane)
-
+    # add light
     light = THREE.PointLight.new(0xff0000, 1, 100)
     light.position.set(50, 50, 50)
     scene.add(light)
@@ -114,12 +106,11 @@ def main():
 
     
     #-----------------------------------------------------------------------
-    # parameters for capsule
+    # GEOMETRY CREATION: CAPSULE
 
     if geom_params.type == "capsule":
-        
+        # first for loop to create capsules on x-axis
         for i in range (geom_params.x):
-            # erstellt Außenmaße unserer Würfel,new braucht 2 werte um zu arbeiten
             geom = THREE.CapsuleGeometry.new(geom_params.radius, geom_params.length, geom_params.capSubdivisions, geom_params.radial_segments)
 
             geom.translate (geom_params.radius*i*2,0,0)
@@ -134,7 +125,9 @@ def main():
             line = THREE.LineSegments.new(edges,line_material)
             capsule_lines.append(line)
             scene.add(line)
+            # second for loop (nested) to create capsules on second axis
             for j in range (geom_params.y):
+
                 #after consultation with zuardin: clone the capsules 
                 geom = geom.clone()
 
@@ -152,9 +145,9 @@ def main():
                 scene.add(line)
 
     #-----------------------------------------------------------------------
-    #parameters for cylinders 
+    # GEOMETRY CREATION: CYLINDER
     elif geom_params.type == "cylinder":
-        # Generate the boxes using for loop
+        # first for loop to create cylinders on x axis
         for i in range (geom_params.x):
             geom = THREE.CylinderGeometry.new(geom_params.radius, geom_params.radius, geom_params.height, geom_params.radial_segments)
 
@@ -170,9 +163,10 @@ def main():
             line = THREE.LineSegments.new(edges,line_material)
             cylinder_lines.append(line)
             scene.add(line)
-            # extend to second lane
+            # inner for loop to create cylinders on second axis
             for j in range (geom_params.y):
-                geom = THREE.CylinderGeometry.new(geom_params.radius, geom_params.radius, geom_params.height, geom_params.radial_segments)
+                # clone existing geometry
+                geom = geom.clone()
 
                 geom.translate(0, 0, geom_params.radius*2)
                 geom.rotateX(math.radians(geom_params.rotation_y)/geom_params.y*j)
@@ -201,23 +195,27 @@ def main():
 
     
     param_folder = gui.addFolder('Parameters')
-    # slider for changing the geometry.
+    # slider for changing the geometry. Adapted to the used geometries
     param_folder.add(geom_params, 'radius', 5, 100, 1)
     param_folder.add(geom_params, 'x', 1, 10, 1)
     param_folder.add(geom_params, 'y', 1, 10, 1)
     param_folder.add(geom_params, 'rotation_x', 0, 270)
     param_folder.add(geom_params, 'rotation_y', 0, 270)
     param_folder.add(geom_params, 'radial_segments',4,50)
-    #param_folder.add(geom_params, 'rotation_y', 0, 270)
     param_folder.open()
     
     #-----------------------------------------------------------------------
     # RENDER + UPDATE THE SCENE AND GEOMETRIES
     render()
     # end of main 
+
 #-----------------------------------------------------------------------
 # HELPER FUNCTIONS
-#update the capsules
+'''
+UPDATE CAPSULES: updates the capsules if the used geometry is capsule
+parameters: none
+returns: all wanted capsules in the scene for the webapp
+'''
 def update_capsules ():
     global capsules_x, capsules_y, capsule_lines, material, line_material
      
@@ -295,11 +293,14 @@ def update_capsules ():
 
 
 
-#update the cylinders 
+'''UPDATE CYLINDERS: updates the cylinders if the used geometry is cylinder
+parameters: none
+returns: all wanted cylinders in the scene for the webapp
+'''
 def update_cylinders():
     global cylinders_x, cylinders_y, cylinder_lines, material, line_material
 
-    #make sure you dont have 0 cylinders
+    # make sure you dont have 0 cylinders total
     if len(cylinders_x) != 0 or len(cylinders_y) != 0:
         if len(cylinders_x) != geom_params.x and len(cylinders_y) != geom_params.y:
             # delete all cylinders 
@@ -311,13 +312,13 @@ def update_cylinders():
             for line in cylinder_lines: 
                 scene.remove(line)
             
-
+            # place new cylinders. Same structure as used above, using a nested for loop
             for i in range (geom_params.x):
-                # place the cylinder in GUI
+                # create and place the cylinder in GUI
                 geom = THREE.CylinderGeometry.new(geom_params.radius, geom_params.radius, geom_params.height, geom_params.radial_segments)
                 geom.translate (geom_params.radius*i*2,0,0)
                 geom.rotateX(math.radians(geom_params.rotation_x)/geom_params.x*i)
-                # create cylinder 
+                
                 cylinder = THREE.Mesh.new(geom, material)
                 cylinders_x.append(cylinder)
                 scene.add(cylinder)
@@ -328,6 +329,7 @@ def update_cylinders():
                 cylinder_lines.append(line)
                 # place cylinder in scene 
                 scene.add(line)
+                # inner for loop
                 for j in range(geom_params.y):
                     geom = geom.clone()
                     geom.translate(0, 0, geom_params.radius * 2)

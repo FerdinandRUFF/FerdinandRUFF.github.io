@@ -6,11 +6,11 @@ from pyodide.ffi import create_proxy, to_js
 import math
 
 #-----------------------------------------------------------------------
-# USE THIS FUNCTION TO WRITE THE MAIN PROGRAM
+# MAIN FUNCTION
 def main():
     #-----------------------------------------------------------------------
     # VISUAL SETUP
-    # Declare the variables
+    # Declare the global variables
     global renderer, scene, camera, controls,composer
     
     #Set up the renderer
@@ -27,7 +27,7 @@ def main():
     camera.position.z = 50
     scene.add(camera)
 
-    #create a plane 
+    #create a plane to make visualization more three dimensional
     geometry = THREE.PlaneGeometry.new(2000, 2000)
     geometry.rotateX(- math.pi / 2)
 
@@ -46,23 +46,38 @@ def main():
     # Set up responsive window
     resize_proxy = create_proxy(on_window_resize)
     window.addEventListener('resize', resize_proxy) 
+
     #-----------------------------------------------------------------------
-    # YOUR DESIGN / GEOMETRY GENERATION
     # Geometry Creation
-    
+    '''
+    This is the loop I created to generate the trees.
+    The idea is that max_it sets the maximum number of iterations for the
+    recursive function that generates the structure. 
+    Number_trees specifies how many trees should be
+    built and tree_height specifies the height of the first trees. This is 
+    increased in every loop iteration.'''
     max_it = 1
     number_trees = 5
     tree_height = 2
     for tree in range(0, number_trees):
+        # create coordinate string
         coordinate_string = translate_coordinates(0, max_it, "gh")
+        # translate the string into the coordinates for the 3d model
         g, h = use_coordinates(coordinate_string)
+        # draw the tree
         my_axiom_system = system(0, tree_height, "d")
         draw_system((my_axiom_system), THREE.Vector3.new(g,-20,h))
-        #negative round
+        
+        # same tree setup, but placing it in negative coordinates
+        # create coordinate string with i and k to get negative value
         coordinate_string = translate_coordinates(0, max_it, "ik")
+        # translate the string into the coordinates for the 3d model
         g, h = use_coordinates(coordinate_string)
+        # draw the tree
         my_axiom_system = system(0, tree_height, "d")
         draw_system((my_axiom_system), THREE.Vector3.new(g,-20,h))
+
+        # increase variables for next round of loop
         max_it = max_it + 1
         tree_height = tree_height + 1
 
@@ -71,14 +86,6 @@ def main():
     # USER INTERFACE
     # Set up Mouse orbit control
     controls = THREE.OrbitControls.new(camera, renderer.domElement)
-
-    # Set up GUI
-    """ gui = window.dat.GUI.new()
-    param_folder = gui.addFolder('Parameters')
-    param_folder.add(geom1_params, 'size', 10,100,1)
-    param_folder.add(geom1_params, 'x', 2,100,1)
-    param_folder.add(geom1_params, 'rotation', 0,180)
-    param_folder.open()"""
     
     #-----------------------------------------------------------------------
     # RENDER + UPDATE THE SCENE AND GEOMETRIES
@@ -86,7 +93,11 @@ def main():
     
 #-----------------------------------------------------------------------
 # HELPER FUNCTIONS
-# define rules for coordinates for draw_system
+''' GENERATE_COORDINATES
+define rules for coordinates for draw_system. a helper function
+that is used in the recursive function translate_coordinates()
+parameters: symbol: input string symbol to generate output string
+returns: output string'''
 def generate_coordinates(symbol):
     if symbol == "g":
         return "gg"
@@ -97,6 +108,15 @@ def generate_coordinates(symbol):
     elif symbol == "k":
         return "kk"
 
+'''
+TRANSLATE_COORDINATES
+a recursive function that creates a string of coordinates for later
+tree creation.
+parameters:
+current_iteration: int, initially 0
+max_iterations: int, defining how many recursive calls we want
+axiom: string, axiom to start the string creation with
+'''
 def translate_coordinates(current_iteration, max_iterations, axiom):
     current_iteration += 1
     new_axiom = ""
@@ -106,7 +126,12 @@ def translate_coordinates(current_iteration, max_iterations, axiom):
         return new_axiom
     else:
         return translate_coordinates(current_iteration, max_iterations, new_axiom)
-
+'''
+USE_COORDINATES
+function that uses the previously created axiom for coordinate creation.
+parameters: axiom: string
+returns: start_g: int, to be used for tree placement on x-axis
+start_h: int, to be used for tree placement on second axis'''
 def use_coordinates(axiom):
     start_g = 0
     start_h = 0
@@ -123,7 +148,11 @@ def use_coordinates(axiom):
 
 
 #-----------------------------------------------------------------------
-# Define RULES in a function which takes one SYMBOL and applies rules generation
+'''
+GENERATE
+define the rules to be used in recursive function
+params: symbol: string
+returns: string or symbol (string)'''
 def generate(symbol):
     if symbol == "d":
         return "abcdfbedfabedfcd"
@@ -132,7 +161,9 @@ def generate(symbol):
     elif symbol == "b" or symbol == "c" or symbol == "e" or symbol == "f":
         return symbol
     
-# A recursive fundtion, which taken an AXIOM as an inout and runs the generate function for each symbol
+'''SYSTEM
+A recursive function, which taken an AXIOM as an inout and runs the generate function for each symbol
+'''
 def system(current_iteration, max_iterations, axiom):
     current_iteration += 1
     new_axiom = ""
@@ -143,18 +174,21 @@ def system(current_iteration, max_iterations, axiom):
     else:
         return system(current_iteration, max_iterations, new_axiom)
 
+'''
+DRAW_SYSTEM'''
 def draw_system(axiom, initial_point):
-    #move vec beschreibt wie hoch jede einzelne linie ist 
+    # generate move_vec
     move_vec = THREE.Vector3.new(0,15,0)
+    # empty list creation
     old_states = []
     old_move_vecs = []
     lines = []
 
+    # for each symbol in our generated axiom, fulfill the respective task
     for symbol in axiom:
-        # zeichnet bzw. speichert anfangs- und endpunkt
+        # draws one branch of the tree
         if symbol == "a" or symbol == "d":
             start_point = THREE.Vector3.new(initial_point.x, initial_point.y, initial_point.z)
-            #initial_point = initial_point.add(move_vec)
             end_point = THREE.Vector3.new(initial_point.x, initial_point.y, initial_point.z)
             end_point = end_point.add(move_vec)
             line = []
@@ -164,7 +198,7 @@ def draw_system(axiom, initial_point):
 
             initial_point = end_point
 
-        # b speichert nur 
+        # b saves current status
         elif symbol == "b":
             old_state = THREE.Vector3.new(initial_point.x, initial_point.y, initial_point.z)
             old_move_vec = THREE.Vector3.new(move_vec.x, move_vec.y, move_vec.z)
@@ -178,14 +212,15 @@ def draw_system(axiom, initial_point):
         elif symbol == "e":
             move_vec.applyAxisAngle(THREE.Vector3.new(0,0,1), -math.pi/7)
         
-        #verschiebt den Anfangspunkt auf den letzten Stand 
+        # moves initial point to previous status 
         elif symbol == "f":
             initial_point = THREE.Vector3.new(old_states[-1].x, old_states[-1].y, old_states[-1].z)
             move_vec = THREE.Vector3.new(old_move_vecs[-1].x, old_move_vecs[-1].y, old_move_vecs[-1].z)
             old_states.pop(-1)
             old_move_vecs.pop(-1)
-
+    # define global scene
     global scene
+    # draw the previously generated lines to create a tree
     line_material = THREE.LineBasicMaterial.new( THREE.Color.new(0x0000ff))
     for points in lines:
         line_geom = THREE.BufferGeometry.new()
@@ -194,7 +229,7 @@ def draw_system(axiom, initial_point):
 
         line_geom.setFromPoints(points)
         vis_line = THREE.Line.new(line_geom, line_material)
-
+        # add our tree
         scene.add(vis_line)
 
 # Simple render and animate
@@ -236,6 +271,6 @@ def on_window_resize(event):
     #post processing after resize
     post_process()
 #-----------------------------------------------------------------------
-#RUN THE MAIN PROGRAM
+
 if __name__=='__main__':
     main()
